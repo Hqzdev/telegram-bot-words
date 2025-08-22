@@ -1,0 +1,364 @@
+{
+  "questions": {
+    "q1_1": {
+      "text": "1.1. Укажите ФИО собственника/арендатора:",
+      "type": "text",
+      "next": "q1_2"
+    },
+    "q1_2": {
+      "text": "1.2. Ваше имя в Telegram:",
+      "type": "text",
+      "next": "q1_3"
+    },
+    "q1_3": {
+      "text": "1.3. Площадь участка в гектарах:",
+      "type": "text",
+      "next": "q1_4"
+    },
+    "q1_4": {
+      "text": "1.4. Местоположение (населенный пункт):",
+      "type": "text",
+      "next": "q1_5"
+    },
+    "q1_5": {
+      "text": "1.5. Кадастровый номер земельного участка:",
+      "type": "text",
+      "next": "q2_1"
+    },
+    "q2_1": {
+      "text": "2.1. Как используется земля в настоящее время? Укажите основной вид использования (можно код вида разрешенной деятельности, согласно классификатору):",
+      "type": "multi_choice",
+      "options": [
+        {
+          "text": "Растениеводство (укажите культуры)",
+          "id": "q2_1_plant",
+          "comment_required": true,
+          "comment_type": "required"
+        },
+        {
+          "text": "Животноводство (укажите виды)",
+          "id": "q2_1_animal",
+          "comment_required": true,
+          "comment_type": "required"
+        },
+        {
+          "text": "Участок не используется более 2х лет",
+          "id": "q2_1_unused",
+          "comment_required": false,
+          "comment_type": "none"
+        },
+        {
+          "text": "Другое",
+          "id": "q2_1_other",
+          "comment_required": true,
+          "comment_type": "required"
+        }
+      ],
+      "next": "q2_2"
+    },
+    "q2_2": {
+      "text": "2.2. Есть ли на участке постройки?",
+      "type": "single_choice",
+      "options": [
+        {
+          "text": "Да (перечислите)",
+          "id": "yes",
+          "comment_required": true,
+          "comment_type": "text",
+          "comment_question": "2.2. Перечислите постройки"
+        },
+        {
+          "text": "Нет",
+          "id": "no",
+          "comment_required": false,
+          "comment_type": "none"
+        }
+      ],
+      "next": "q2_3"
+    },
+    "q2_3": {
+      "text": "2.3. Какие проблемы мешают эффективному использованию участка?",
+      "type": "multi_choice",
+      "options": [
+        {
+          "text": "Нехватка воды/орошения",
+          "id": "q2_3_water",
+          "comment_required": false,
+          "comment_type": "none"
+        },
+        {
+          "text": "Эрозия почвы",
+          "id": "q2_3_erosion",
+          "comment_required": false,
+          "comment_type": "none"
+        },
+        {
+          "text": "Недостаток собственных оборотных средств.",
+          "id": "q2_3_money",
+          "comment_required": false,
+          "comment_type": "none"
+        },
+        {
+          "text": "Отсутствие техники/оборудования",
+          "id": "q2_3_tech",
+          "comment_required": false,
+          "comment_type": "none"
+        },
+        {
+          "text": "Юридические ограничения",
+          "id": "q2_3_legal",
+          "comment_required": false,
+          "comment_type": "none"
+        },
+        {
+          "text": "Другое",
+          "id": "q2_3_other",
+          "comment_required": true,
+          "comment_type": "required"
+        }
+      ],
+      "next": "q3_1"
+    },
+    "q3_1": {
+      "text": "3.1. Какие направления развития вы рассматриваете?",
+      "type": "multi_choice",
+      "options": [
+        {
+          "text": "Расширение видов растениеводства (укажите каких именно)",
+          "id": "q3_1_plant",
+          "comment_required": true,
+          "comment_type": "optional"
+        },
+        {
+          "text": "Разведение новых видов животных/птиц (укажите каких именно)",
+          "id": "q3_1_animal",
+          "comment_required": true,
+          "comment_type": "optional"
+        },
+        {
+          "text": "Органическое земледелие",
+          "id": "q3_1_organic",
+          "comment_required": true,
+          "comment_type": "optional"
+        },
+        {
+          "text": "Агротуризм",
+          "id": "q3_1_agrotourism",
+          "comment_required": true,
+          "comment_type": "optional"
+        },
+        {
+          "text": "Переработка сельхозпродукции",
+          "id": "q3_1_processing",
+          "comment_required": true,
+          "comment_type": "optional"
+        },
+        {
+          "text": "Создание тепличного хозяйства (укажите какое именно)",
+          "id": "q3_1_greenhouse",
+          "comment_required": true,
+          "comment_type": "optional"
+        },
+        {
+          "text": "Другое",
+          "id": "q3_1_other",
+          "comment_required": true,
+          "comment_type": "optional"
+        }
+      ],
+      "next": "q3_2"
+    },
+    "q3_2": {
+      "text": "3.2. Нуждаетесь ли вы в следующих видах поддержки?",
+      "type": "multi_choice",
+      "options": [
+        {
+          "text": "Финансовая (гранты, субсидии)",
+          "id": "q3_2_finance",
+          "comment_required": true,
+          "comment_type": "optional"
+        },
+        {
+          "text": "Консультации агрономов/зоотехников",
+          "id": "q3_2_consult",
+          "comment_required": true,
+          "comment_type": "optional"
+        },
+        {
+          "text": "Помощь в подключении к инфраструктуре (вода, электричество)",
+          "id": "q3_2_infra",
+          "comment_required": true,
+          "comment_type": "optional"
+        },
+        {
+          "text": "Юридическое сопровождение",
+          "id": "q3_2_legal",
+          "comment_required": true,
+          "comment_type": "optional"
+        },
+        {
+          "text": "Другое",
+          "id": "q3_2_other",
+          "comment_required": true,
+          "comment_type": "optional"
+        }
+      ],
+      "next": "q3_3"
+    },
+    "q3_3": {
+      "text": "3.3. Готовы ли вы к сотрудничеству с другими с/х производителями или инвесторами?",
+      "type": "single_choice",
+      "options": [
+        {
+          "text": "Да",
+          "id": "yes",
+          "comment_required": false,
+          "comment_type": "none"
+        },
+        {
+          "text": "Нет",
+          "id": "no",
+          "comment_required": false,
+          "comment_type": "none"
+        },
+        {
+          "text": "Рассмотрю предложения",
+          "id": "maybe",
+          "comment_required": false,
+          "comment_type": "none"
+        }
+      ],
+      "next": "q4_1_water"
+    },
+    "q4_1_water": {
+      "text": "4.1. Есть ли на участке доступ к воде:",
+      "type": "single_choice",
+      "options": [
+        {
+          "text": "Да",
+          "id": "yes",
+          "comment_required": false,
+          "comment_type": "none"
+        },
+        {
+          "text": "Нет",
+          "id": "no",
+          "comment_required": false,
+          "comment_type": "none"
+        }
+      ],
+      "next": "q4_1_electricity"
+    },
+    "q4_1_electricity": {
+      "text": "4.1. Есть ли на участке доступ к электричеству:",
+      "type": "single_choice",
+      "options": [
+        {
+          "text": "Да",
+          "id": "yes",
+          "comment_required": false,
+          "comment_type": "none"
+        },
+        {
+          "text": "Нет",
+          "id": "no",
+          "comment_required": false,
+          "comment_type": "none"
+        }
+      ],
+      "next": "q4_1_roads"
+    },
+    "q4_1_roads": {
+      "text": "4.1. Есть ли на участке доступ к дорогам:",
+      "type": "single_choice",
+      "options": [
+        {
+          "text": "Да",
+          "id": "yes",
+          "comment_required": false,
+          "comment_type": "none"
+        },
+        {
+          "text": "Нет",
+          "id": "no",
+          "comment_required": false,
+          "comment_type": "none"
+        }
+      ],
+      "next": "q4_1_consultation"
+    },
+    "q4_1_consultation": {
+      "text": "4.1. Нужна ли консультационная помощь?",
+      "type": "single_choice",
+      "options": [
+        {
+          "text": "Да",
+          "id": "yes",
+          "comment_required": false,
+          "comment_type": "none"
+        },
+        {
+          "text": "Нет",
+          "id": "no",
+          "comment_required": false,
+          "comment_type": "none"
+        }
+      ],
+      "next": "q4_2"
+    },
+    "q4_2": {
+      "text": "4.2. Требуется ли модернизация инфраструктуры?",
+      "type": "single_choice",
+      "options": [
+        {
+          "text": "Да (укажите что именно)",
+          "id": "yes",
+          "comment_required": true,
+          "comment_type": "text",
+          "comment_question": "4.2. Что именно требуется модернизировать"
+        },
+        {
+          "text": "Нет",
+          "id": "no",
+          "comment_required": false,
+          "comment_type": "none"
+        }
+      ],
+      "next": "q5_1"
+    },
+    "q5_1": {
+      "text": "5.1. Ваши пожелания или идеи по развитию участка:",
+      "type": "text",
+      "next": "q6"
+    },
+    "q6": {
+      "text": "6. Согласие на использование предоставленной информации для целей планирования и развития сельскохозяйственных территорий нашего поселения:",
+      "type": "single_choice",
+      "options": [
+        {
+          "text": "Да",
+          "id": "yes",
+          "comment_required": false,
+          "comment_type": "none"
+        }
+      ],
+      "next": "q7_phone"
+    },
+    "q7_phone": {
+      "text": "7. Контакт для обратной связи — Тел.:",
+      "type": "text",
+      "next": "q7_email"
+    },
+    "q7_email": {
+      "text": "7. Контакт для обратной связи — E-mail:",
+      "type": "text",
+      "next": "completed"
+    }
+  },
+  "comment_types": {
+    "none": "Не требует комментария",
+    "required": "Обязательный комментарий",
+    "optional": "Необязательный комментарий (можно пропустить)",
+    "text": "Текстовый комментарий"
+  }
+}
