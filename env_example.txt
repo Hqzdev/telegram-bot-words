@@ -1,8 +1,12 @@
 # Telegram Bot Token (получить у @BotFather)
-TELEGRAM_TOKEN=your_telegram_bot_token_here
+BOT_TOKEN=your_telegram_bot_token_here
 
 # Google Sheets ID (ID таблицы из URL)
 GOOGLE_SHEETS_ID=your_google_sheets_id_here
 
-# Путь к файлу с учетными данными Google Service Account
+# Для локальной разработки: путь к файлу с учетными данными Google Service Account
 GOOGLE_CREDENTIALS_FILE=credentials.json
+
+# Для Vercel: содержимое JSON файла с учетными данными Google Service Account
+# Скопируйте все содержимое файла credentials.json в эту переменную
+GOOGLE_CREDENTIALS_JSON={"type":"service_account","project_id":"your-project","private_key_id":"...","private_key":"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n","client_email":"...","client_id":"...","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token","auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs","client_x509_cert_url":"..."}

@@ -14,9 +14,9 @@ logger = logging.getLogger(__name__)
 class GoogleSheetsManager:
     """Менеджер для работы с Google Sheets"""
     
-    def __init__(self, credentials_file: str, spreadsheet_id: str):
-        self.credentials_file = credentials_file
-        self.spreadsheet_id = spreadsheet_id
+    def __init__(self, config):
+        self.config = config
+        self.spreadsheet_id = config.google_sheets_id
         self.service = self._create_service()
     
     def _create_service(self):
@@ -25,9 +25,12 @@ class GoogleSheetsManager:
             # Области доступа
             scopes = ['https://www.googleapis.com/auth/spreadsheets']
             
+            # Получаем учетные данные
+            credentials_data = self.config.get_google_credentials()
+            
             # Загружаем учетные данные
-            credentials = Credentials.from_service_account_file(
-                self.credentials_file, scopes=scopes
+            credentials = Credentials.from_service_account_info(
+                credentials_data, scopes=scopes
             )
             
             # Создаем сервис
@@ -70,16 +73,17 @@ class GoogleSheetsManager:
                 body={'values': survey_data}
             ).execute()
             
-            # Добавляем пустую строку после анкеты
+            # Добавляем две пустые строки после анкеты
+            empty_rows = [['', ''], ['', '']]
             self.service.spreadsheets().values().append(
                 spreadsheetId=self.spreadsheet_id,
                 range='A:B',
                 valueInputOption='RAW',
                 insertDataOption='INSERT_ROWS',
-                body={'values': [['', '']]}
+                body={'values': empty_rows}
             ).execute()
             
-            logger.info(f"Добавлены данные опроса: {len(survey_data)} строк")
+            logger.info(f"Добавлены данные опроса: {len(survey_data)} строк + 2 пустые строки")
             
         except HttpError as e:
             logger.error(f"Ошибка при добавлении данных в таблицу: {e}")

@@ -30,10 +30,7 @@ class SurveyHandlers:
     def _get_sheets_manager(self):
         """Получить менеджер Google Sheets (ленивая инициализация)"""
         if self.sheets_manager is None:
-            self.sheets_manager = GoogleSheetsManager(
-                self.config.google_credentials_file,
-                self.config.google_sheets_id
-            )
+            self.sheets_manager = GoogleSheetsManager(self.config)
         return self.sheets_manager
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
