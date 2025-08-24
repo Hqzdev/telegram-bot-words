@@ -33,20 +33,24 @@ def initialize_bot_globally():
     global application
     
     if application is None:
-        # Загружаем переменные окружения
-        from dotenv import load_dotenv
-        load_dotenv()
-        
-        # Инициализируем конфигурацию
-        config = Config()
-        
-        # Инициализируем приложение
-        application = Application.builder().token(config.telegram_token).build()
-        
-        # Настраиваем обработчики
-        setup_handlers(application)
-        
-        logger.info("Бот инициализирован для Vercel")
+        try:
+            # Загружаем переменные окружения
+            from dotenv import load_dotenv
+            load_dotenv()
+            
+            # Инициализируем конфигурацию
+            config = Config()
+            
+            # Инициализируем приложение
+            application = Application.builder().token(config.telegram_token).build()
+            
+            # Настраиваем обработчики
+            setup_handlers(application)
+            
+            logger.info("Бот инициализирован для Vercel")
+        except Exception as e:
+            logger.error(f"Ошибка при инициализации бота: {e}")
+            raise
 
 def handler(request, context):
     """Основная функция для Vercel serverless"""

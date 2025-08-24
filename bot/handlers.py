@@ -31,7 +31,7 @@ class SurveyHandlers:
         """Получить менеджер Google Sheets (ленивая инициализация)"""
         if self.sheets_manager is None:
             self.sheets_manager = GoogleSheetsManager(
-                self.config.google_credentials_file,
+                self.config.google_credentials_json,
                 self.config.google_sheets_id
             )
         return self.sheets_manager
@@ -207,27 +207,14 @@ class SurveyHandlers:
             if not comment_question:
                 comment_question = "Укажите дополнительную информацию:"
             
-            # Формируем улучшенное сообщение с указанием по какому ответу нужна информация
-            option_text = self._get_option_text(question_id, option_id)
-            enhanced_question = f"📝 По ответу: «{option_text}»\n\n{comment_question}"
-            
-            # Если есть еще опции, требующие комментариев, показываем это
-            if len(options_needing_comments) > 1:
-                remaining_options = []
-                for opt_id in options_needing_comments[1:]:
-                    opt_text = self._get_option_text(question_id, opt_id)
-                    remaining_options.append(f"• {opt_text}")
-                
-                enhanced_question += f"\n\n⏭️ Далее потребуется информация по:\n" + "\n".join(remaining_options)
-            
-            self.survey_manager.set_waiting_for_comment(user_id, option_id, enhanced_question)
+            self.survey_manager.set_waiting_for_comment(user_id, option_id, comment_question)
             
             keyboard = self.keyboard_builder.build_comment_prompt_keyboard(
                 question_id, option_id, True
             )
             
             await update.callback_query.edit_message_text(
-                enhanced_question,
+                comment_question,
                 reply_markup=keyboard
             )
         else:
@@ -324,20 +311,7 @@ class SurveyHandlers:
                 if not comment_question:
                     comment_question = "Укажите дополнительную информацию:"
                 
-                # Формируем улучшенное сообщение с указанием по какому ответу нужна информация
-                option_text = self._get_option_text(current_question, next_option_id)
-                enhanced_question = f"📝 По ответу: «{option_text}»\n\n{comment_question}"
-                
-                # Если есть еще опции, требующие комментариев, показываем это
-                if len(options_needing_comments) > 1:
-                    remaining_options = []
-                    for opt_id in options_needing_comments[1:]:
-                        opt_text = self._get_option_text(current_question, opt_id)
-                        remaining_options.append(f"• {opt_text}")
-                    
-                    enhanced_question += f"\n\n⏭️ Далее потребуется информация по:\n" + "\n".join(remaining_options)
-                
-                self.survey_manager.set_waiting_for_comment(user_id, next_option_id, enhanced_question)
+                self.survey_manager.set_waiting_for_comment(user_id, next_option_id, comment_question)
                 
                 keyboard = self.keyboard_builder.build_comment_prompt_keyboard(
                     current_question, next_option_id, True
@@ -345,7 +319,7 @@ class SurveyHandlers:
                 
                 await context.bot.send_message(
                     chat_id=update.effective_chat.id,
-                    text=enhanced_question,
+                    text=comment_question,
                     reply_markup=keyboard
                 )
             else:
@@ -458,13 +432,6 @@ class SurveyHandlers:
         user_id = update.effective_user.id
         current_question = self.survey_manager.get_current_question(user_id)
         
-        # Проверяем валидацию ответа
-        if not self.data_processor.validate_answer(current_question, text):
-            validation_type = self.survey_manager.get_question_validation(current_question)
-            error_message = self._get_validation_error_message(validation_type)
-            await update.message.reply_text(error_message)
-            return
-        
         # Сохраняем ответ
         self.survey_manager.save_answer(user_id, current_question, text)
         
@@ -557,31 +524,6 @@ class SurveyHandlers:
                     chat_id=update.effective_chat.id,
                     text="Произошла ошибка при сохранении данных. Пожалуйста, попробуйте позже."
                 )
-    
-    def _get_validation_error_message(self, validation_type: str) -> str:
-        """Получить сообщение об ошибке валидации"""
-        if validation_type == "email":
-            return "❌ Неверный формат email адреса. Пожалуйста, введите корректный email (например: user@example.com)"
-        elif validation_type == "phone":
-            return "❌ Неверный формат номера телефона. Пожалуйста, введите корректный номер (например: +7 999 123-45-67 или 89991234567)"
-        elif validation_type == "number":
-            return "❌ Неверный формат числа. Пожалуйста, введите числовое значение (например: 5.5 или 10)"
-        elif validation_type == "full_name":
-            return "❌ ФИО должно содержать минимум 3 слова (например: Иванов Иван Иванович)"
-        elif validation_type == "telegram_username":
-            return "❌ Имя в Telegram должно содержать символ @ (например: @username или user@domain.com)"
-        elif validation_type == "cadastral_number":
-            return "❌ Неверный формат кадастрового номера. Пожалуйста, введите только цифры и двоеточия (например: 90:01:050801:000 или 1:2:123:456)"
-        else:
-            return "❌ Неверный формат ответа. Пожалуйста, попробуйте еще раз."
-    
-    def _get_option_text(self, question_id: str, option_id: str) -> str:
-        """Получить текст опции по ID"""
-        options = self.survey_manager.get_question_options(question_id)
-        for option in options:
-            if option.get("id") == option_id:
-                return option.get("text", "")
-        return ""
 
 def setup_handlers(application: Application):
     """Настройка обработчиков"""

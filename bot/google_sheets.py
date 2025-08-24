@@ -3,6 +3,7 @@
 """
 
 import os
+import json
 from typing import List, Dict, Any
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
@@ -14,8 +15,8 @@ logger = logging.getLogger(__name__)
 class GoogleSheetsManager:
     """Менеджер для работы с Google Sheets"""
     
-    def __init__(self, credentials_file: str, spreadsheet_id: str):
-        self.credentials_file = credentials_file
+    def __init__(self, credentials_json: str, spreadsheet_id: str):
+        self.credentials_json = credentials_json
         self.spreadsheet_id = spreadsheet_id
         self.service = self._create_service()
     
@@ -25,9 +26,10 @@ class GoogleSheetsManager:
             # Области доступа
             scopes = ['https://www.googleapis.com/auth/spreadsheets']
             
-            # Загружаем учетные данные
-            credentials = Credentials.from_service_account_file(
-                self.credentials_file, scopes=scopes
+            # Загружаем учетные данные из JSON строки
+            credentials_info = json.loads(self.credentials_json)
+            credentials = Credentials.from_service_account_info(
+                credentials_info, scopes=scopes
             )
             
             # Создаем сервис

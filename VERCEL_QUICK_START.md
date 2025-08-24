@@ -21,7 +21,7 @@ vercel --prod
 ```bash
 vercel env add TELEGRAM_TOKEN
 vercel env add GOOGLE_SHEETS_ID
-vercel env add GOOGLE_CREDENTIALS_FILE
+vercel env add GOOGLE_CREDENTIALS_JSON
 ```
 
 ### 5. Настройте webhook
@@ -42,7 +42,7 @@ python setup_webhook.py https://your-project.vercel.app
 Вам нужно будет добавить в Vercel:
 - `TELEGRAM_TOKEN` - токен вашего бота
 - `GOOGLE_SHEETS_ID` - ID Google таблицы
-- `GOOGLE_CREDENTIALS_FILE` - содержимое JSON файла с credentials
+- `GOOGLE_CREDENTIALS_JSON` - содержимое JSON файла с credentials
 
 ## 🌐 После деплоя
 

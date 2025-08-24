@@ -11,7 +11,7 @@ class Config:
     def __init__(self):
         self.telegram_token: str = self._get_required_env('TELEGRAM_TOKEN')
         self.google_sheets_id: str = self._get_required_env('GOOGLE_SHEETS_ID')
-        self.google_credentials_file: str = self._get_required_env('GOOGLE_CREDENTIALS_FILE')
+        self.google_credentials_json: str = self._get_required_env('GOOGLE_CREDENTIALS_JSON')
     
     def _get_required_env(self, key: str) -> str:
         """Получить обязательную переменную окружения"""

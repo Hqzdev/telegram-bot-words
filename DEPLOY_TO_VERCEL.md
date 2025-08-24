@@ -21,7 +21,7 @@ vercel login
 ```env
 TELEGRAM_TOKEN=your_telegram_bot_token
 GOOGLE_SHEETS_ID=your_google_sheets_id
-GOOGLE_CREDENTIALS_FILE=your_google_credentials.json
+GOOGLE_CREDENTIALS_JSON=your_google_credentials_json_content
 ```
 
 **Важно:** Для Google Sheets вам нужно будет загрузить файл credentials в Vercel как переменную окружения.
@@ -45,7 +45,7 @@ vercel
 ```bash
 vercel env add TELEGRAM_TOKEN
 vercel env add GOOGLE_SHEETS_ID
-vercel env add GOOGLE_CREDENTIALS_FILE
+vercel env add GOOGLE_CREDENTIALS_JSON
 ```
 
 Для каждой переменной введите соответствующее значение.
