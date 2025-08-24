@@ -30,7 +30,10 @@ class SurveyHandlers:
     def _get_sheets_manager(self):
         """Получить менеджер Google Sheets (ленивая инициализация)"""
         if self.sheets_manager is None:
-            self.sheets_manager = GoogleSheetsManager(self.config)
+            self.sheets_manager = GoogleSheetsManager(
+                self.config.google_credentials_file,
+                self.config.google_sheets_id
+            )
         return self.sheets_manager
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -60,8 +63,7 @@ class SurveyHandlers:
         if data == "start_survey":
             await self._start_survey(update, context)
         
-        elif data == "restart_survey":
-            await self._restart_survey(update, context)
+
         
         elif data.startswith("single_choice:"):
             await self._handle_single_choice(update, context, data)
@@ -95,8 +97,7 @@ class SurveyHandlers:
         
         # Если не в процессе опроса, предлагаем начать
         await update.message.reply_text(
-            "Для начала опроса используйте команду /start",
-            reply_markup=self.keyboard_builder.build_restart_keyboard()
+            "Для начала опроса используйте команду /start"
         )
     
     async def _start_survey(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -109,15 +110,7 @@ class SurveyHandlers:
         # Отправляем первый вопрос
         await self._send_question(update, context, "q1_1")
     
-    async def _restart_survey(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Перезапустить опрос"""
-        user_id = update.effective_user.id
-        
-        # Очищаем состояние
-        self.survey_manager.clear_user_state(user_id)
-        
-        # Начинаем заново
-        await self._start_survey(update, context)
+
     
     async def _handle_single_choice(self, update: Update, context: ContextTypes.DEFAULT_TYPE, data: str):
         """Обработчик одиночного выбора"""
@@ -155,7 +148,12 @@ class SurveyHandlers:
             )
         else:
             # Сохраняем ответ и переходим к следующему вопросу
-            self.survey_manager.save_answer(user_id, question_id, option_id)
+            # Форматируем ответ для одиночного выбора
+            formatted_answer = {
+                "option": option_id,
+                "comment": ""
+            }
+            self.survey_manager.save_answer(user_id, question_id, formatted_answer)
             self.survey_manager.move_to_next_question(user_id)
             
             # Отправляем следующий вопрос
@@ -209,19 +207,37 @@ class SurveyHandlers:
             if not comment_question:
                 comment_question = "Укажите дополнительную информацию:"
             
-            self.survey_manager.set_waiting_for_comment(user_id, option_id, comment_question)
+            # Формируем улучшенное сообщение с указанием по какому ответу нужна информация
+            option_text = self._get_option_text(question_id, option_id)
+            enhanced_question = f"📝 По ответу: «{option_text}»\n\n{comment_question}"
+            
+            # Если есть еще опции, требующие комментариев, показываем это
+            if len(options_needing_comments) > 1:
+                remaining_options = []
+                for opt_id in options_needing_comments[1:]:
+                    opt_text = self._get_option_text(question_id, opt_id)
+                    remaining_options.append(f"• {opt_text}")
+                
+                enhanced_question += f"\n\n⏭️ Далее потребуется информация по:\n" + "\n".join(remaining_options)
+            
+            self.survey_manager.set_waiting_for_comment(user_id, option_id, enhanced_question)
             
             keyboard = self.keyboard_builder.build_comment_prompt_keyboard(
                 question_id, option_id, True
             )
             
             await update.callback_query.edit_message_text(
-                comment_question,
+                enhanced_question,
                 reply_markup=keyboard
             )
         else:
             # Сохраняем ответ и переходим к следующему вопросу
-            self.survey_manager.save_answer(user_id, question_id, selected_options)
+            # Форматируем ответ для множественного выбора
+            formatted_answer = {
+                "options": selected_options,
+                "comments": {}
+            }
+            self.survey_manager.save_answer(user_id, question_id, formatted_answer)
             self.survey_manager.clear_multi_choice_selections(user_id)
             self.survey_manager.move_to_next_question(user_id)
             
@@ -243,55 +259,211 @@ class SurveyHandlers:
         # Сохраняем комментарий
         current_question = self.survey_manager.get_current_question(user_id)
         current_answer = self.survey_manager.get_all_answers(user_id).get(current_question, {})
+        question_type = self.survey_manager.get_question_type(current_question)
         
-        if isinstance(current_answer, dict):
-            if "comments" not in current_answer:
-                current_answer["comments"] = {}
-            current_answer["comments"][option_id] = text
+        if question_type.value == "single_choice":
+            # Обработка комментария для одиночного выбора
+            if isinstance(current_answer, dict) and "option" in current_answer:
+                # Если ответ уже в правильном формате, обновляем комментарий
+                current_answer["comment"] = text
+            else:
+                # Создаем новый ответ в правильном формате для одиночного выбора
+                current_answer = {
+                    "option": option_id,
+                    "comment": text
+                }
+            
+            self.survey_manager.save_answer(user_id, current_question, current_answer)
+            
+            # Очищаем ожидание комментария
+            self.survey_manager.clear_waiting_for_comment(user_id)
+            
+            # Переходим к следующему вопросу
+            self.survey_manager.move_to_next_question(user_id)
+            
+            # Отправляем следующий вопрос
+            next_question = self.survey_manager.get_current_question(user_id)
+            if next_question == "completed":
+                await self._complete_survey(update, context)
+            else:
+                await self._send_question(update, context, next_question)
+        
         else:
-            # Если ответ еще не словарь, создаем его
-            current_answer = {
-                "options": [option_id] if isinstance(current_answer, list) else [current_answer],
-                "comments": {option_id: text}
-            }
-        
-        self.survey_manager.save_answer(user_id, current_question, current_answer)
-        
-        # Очищаем ожидание комментария
-        self.survey_manager.clear_waiting_for_comment(user_id)
-        
-        # Переходим к следующему вопросу
-        self.survey_manager.move_to_next_question(user_id)
-        
-        # Отправляем следующий вопрос
-        next_question = self.survey_manager.get_current_question(user_id)
-        if next_question == "completed":
-            await self._complete_survey(update, context)
-        else:
-            await self._send_question(update, context, next_question)
+            # Обработка комментария для множественного выбора
+            # Получаем все выбранные опции для текущего вопроса
+            selected_options = self.survey_manager.get_multi_choice_selections(user_id)
+            
+            if isinstance(current_answer, dict) and "options" in current_answer:
+                # Если ответ уже в правильном формате, добавляем комментарий
+                if "comments" not in current_answer:
+                    current_answer["comments"] = {}
+                current_answer["comments"][option_id] = text
+            else:
+                # Создаем новый ответ в правильном формате
+                current_answer = {
+                    "options": selected_options,
+                    "comments": {option_id: text}
+                }
+            
+            self.survey_manager.save_answer(user_id, current_question, current_answer)
+            
+            # Очищаем ожидание комментария
+            self.survey_manager.clear_waiting_for_comment(user_id)
+            
+            # Проверяем, есть ли еще опции, требующие комментариев
+            options_needing_comments = []
+            for opt_id in selected_options:
+                if self.survey_manager.get_option_requires_comment(current_question, opt_id):
+                    if opt_id not in current_answer.get("comments", {}):
+                        options_needing_comments.append(opt_id)
+            
+            if options_needing_comments:
+                # Запрашиваем следующий комментарий
+                next_option_id = options_needing_comments[0]
+                comment_question = self.survey_manager.get_option_comment_question(current_question, next_option_id)
+                if not comment_question:
+                    comment_question = "Укажите дополнительную информацию:"
+                
+                # Формируем улучшенное сообщение с указанием по какому ответу нужна информация
+                option_text = self._get_option_text(current_question, next_option_id)
+                enhanced_question = f"📝 По ответу: «{option_text}»\n\n{comment_question}"
+                
+                # Если есть еще опции, требующие комментариев, показываем это
+                if len(options_needing_comments) > 1:
+                    remaining_options = []
+                    for opt_id in options_needing_comments[1:]:
+                        opt_text = self._get_option_text(current_question, opt_id)
+                        remaining_options.append(f"• {opt_text}")
+                    
+                    enhanced_question += f"\n\n⏭️ Далее потребуется информация по:\n" + "\n".join(remaining_options)
+                
+                self.survey_manager.set_waiting_for_comment(user_id, next_option_id, enhanced_question)
+                
+                keyboard = self.keyboard_builder.build_comment_prompt_keyboard(
+                    current_question, next_option_id, True
+                )
+                
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text=enhanced_question,
+                    reply_markup=keyboard
+                )
+            else:
+                # Все комментарии получены, переходим к следующему вопросу
+                self.survey_manager.clear_multi_choice_selections(user_id)
+                self.survey_manager.move_to_next_question(user_id)
+                
+                # Отправляем следующий вопрос
+                next_question = self.survey_manager.get_current_question(user_id)
+                if next_question == "completed":
+                    await self._complete_survey(update, context)
+                else:
+                    await self._send_question(update, context, next_question)
     
     async def _handle_skip_comment(self, update: Update, context: ContextTypes.DEFAULT_TYPE, data: str):
         """Обработчик пропуска комментария"""
         user_id = update.effective_user.id
         _, question_id, option_id = data.split(":", 2)
         
-        # Очищаем ожидание комментария
-        self.survey_manager.clear_waiting_for_comment(user_id)
+        # Получаем текущий ответ и тип вопроса
+        current_answer = self.survey_manager.get_all_answers(user_id).get(question_id, {})
+        question_type = self.survey_manager.get_question_type(question_id)
         
-        # Переходим к следующему вопросу
-        self.survey_manager.move_to_next_question(user_id)
+        if question_type.value == "single_choice":
+            # Обработка пропуска комментария для одиночного выбора
+            if isinstance(current_answer, dict) and "option" in current_answer:
+                # Если ответ уже в правильном формате, помечаем комментарий как пустую строку
+                current_answer["comment"] = ""
+            else:
+                # Создаем новый ответ в правильном формате для одиночного выбора
+                current_answer = {
+                    "option": option_id,
+                    "comment": ""
+                }
+            
+            self.survey_manager.save_answer(user_id, question_id, current_answer)
+            
+            # Очищаем ожидание комментария
+            self.survey_manager.clear_waiting_for_comment(user_id)
+            
+            # Переходим к следующему вопросу
+            self.survey_manager.move_to_next_question(user_id)
+            
+            # Отправляем следующий вопрос
+            next_question = self.survey_manager.get_current_question(user_id)
+            if next_question == "completed":
+                await self._complete_survey(update, context)
+            else:
+                await self._send_question(update, context, next_question)
         
-        # Отправляем следующий вопрос
-        next_question = self.survey_manager.get_current_question(user_id)
-        if next_question == "completed":
-            await self._complete_survey(update, context)
         else:
-            await self._send_question(update, context, next_question)
+            # Обработка пропуска комментария для множественного выбора
+            selected_options = self.survey_manager.get_multi_choice_selections(user_id)
+            
+            # Создаем или обновляем ответ в правильном формате
+            if isinstance(current_answer, dict) and "options" in current_answer:
+                if "comments" not in current_answer:
+                    current_answer["comments"] = {}
+                # Помечаем пропущенный комментарий как пустую строку
+                current_answer["comments"][option_id] = ""
+            else:
+                current_answer = {
+                    "options": selected_options,
+                    "comments": {option_id: ""}
+                }
+            
+            self.survey_manager.save_answer(user_id, question_id, current_answer)
+            
+            # Очищаем ожидание комментария
+            self.survey_manager.clear_waiting_for_comment(user_id)
+            
+            # Проверяем, есть ли еще опции, требующие комментариев
+            options_needing_comments = []
+            for opt_id in selected_options:
+                if self.survey_manager.get_option_requires_comment(question_id, opt_id):
+                    if opt_id not in current_answer.get("comments", {}):
+                        options_needing_comments.append(opt_id)
+            
+            if options_needing_comments:
+                # Запрашиваем следующий комментарий
+                next_option_id = options_needing_comments[0]
+                comment_question = self.survey_manager.get_option_comment_question(question_id, next_option_id)
+                if not comment_question:
+                    comment_question = "Укажите дополнительную информацию:"
+                
+                self.survey_manager.set_waiting_for_comment(user_id, next_option_id, comment_question)
+                
+                keyboard = self.keyboard_builder.build_comment_prompt_keyboard(
+                    question_id, next_option_id, True
+                )
+                
+                await update.callback_query.edit_message_text(
+                    comment_question,
+                    reply_markup=keyboard
+                )
+            else:
+                # Все комментарии обработаны, переходим к следующему вопросу
+                self.survey_manager.clear_multi_choice_selections(user_id)
+                self.survey_manager.move_to_next_question(user_id)
+                
+                # Отправляем следующий вопрос
+                next_question = self.survey_manager.get_current_question(user_id)
+                if next_question == "completed":
+                    await self._complete_survey(update, context)
+                else:
+                    await self._send_question(update, context, next_question)
     
     async def _handle_text_answer(self, update: Update, context: ContextTypes.DEFAULT_TYPE, text: str):
         """Обработчик текстового ответа"""
         user_id = update.effective_user.id
         current_question = self.survey_manager.get_current_question(user_id)
+        
+        # Проверяем валидацию ответа
+        if not self.data_processor.validate_answer(current_question, text):
+            validation_type = self.survey_manager.get_question_validation(current_question)
+            error_message = self._get_validation_error_message(validation_type)
+            await update.message.reply_text(error_message)
+            return
         
         # Сохраняем ответ
         self.survey_manager.save_answer(user_id, current_question, text)
@@ -363,14 +535,12 @@ class SurveyHandlers:
             
             if update.callback_query is not None:
                 await update.callback_query.edit_message_text(
-                    completion_message,
-                    reply_markup=self.keyboard_builder.build_restart_keyboard()
+                    completion_message
                 )
             else:
                 await context.bot.send_message(
                     chat_id=update.effective_chat.id,
-                    text=completion_message,
-                    reply_markup=self.keyboard_builder.build_restart_keyboard()
+                    text=completion_message
                 )
             
             # Очищаем состояние пользователя
@@ -380,15 +550,38 @@ class SurveyHandlers:
             logger.error(f"Ошибка при сохранении данных: {e}")
             if update.callback_query is not None:
                 await update.callback_query.edit_message_text(
-                    "Произошла ошибка при сохранении данных. Пожалуйста, попробуйте позже.",
-                    reply_markup=self.keyboard_builder.build_restart_keyboard()
+                    "Произошла ошибка при сохранении данных. Пожалуйста, попробуйте позже."
                 )
             else:
                 await context.bot.send_message(
                     chat_id=update.effective_chat.id,
-                    text="Произошла ошибка при сохранении данных. Пожалуйста, попробуйте позже.",
-                    reply_markup=self.keyboard_builder.build_restart_keyboard()
+                    text="Произошла ошибка при сохранении данных. Пожалуйста, попробуйте позже."
                 )
+    
+    def _get_validation_error_message(self, validation_type: str) -> str:
+        """Получить сообщение об ошибке валидации"""
+        if validation_type == "email":
+            return "❌ Неверный формат email адреса. Пожалуйста, введите корректный email (например: user@example.com)"
+        elif validation_type == "phone":
+            return "❌ Неверный формат номера телефона. Пожалуйста, введите корректный номер (например: +7 999 123-45-67 или 89991234567)"
+        elif validation_type == "number":
+            return "❌ Неверный формат числа. Пожалуйста, введите числовое значение (например: 5.5 или 10)"
+        elif validation_type == "full_name":
+            return "❌ ФИО должно содержать минимум 3 слова (например: Иванов Иван Иванович)"
+        elif validation_type == "telegram_username":
+            return "❌ Имя в Telegram должно содержать символ @ (например: @username или user@domain.com)"
+        elif validation_type == "cadastral_number":
+            return "❌ Неверный формат кадастрового номера. Пожалуйста, введите только цифры и двоеточия (например: 90:01:050801:000 или 1:2:123:456)"
+        else:
+            return "❌ Неверный формат ответа. Пожалуйста, попробуйте еще раз."
+    
+    def _get_option_text(self, question_id: str, option_id: str) -> str:
+        """Получить текст опции по ID"""
+        options = self.survey_manager.get_question_options(question_id)
+        for option in options:
+            if option.get("id") == option_id:
+                return option.get("text", "")
+        return ""
 
 def setup_handlers(application: Application):
     """Настройка обработчиков"""

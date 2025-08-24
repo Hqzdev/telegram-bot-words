@@ -71,9 +71,7 @@ class KeyboardBuilder:
         keyboard = []
         return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=False)
     
-    def build_restart_keyboard(self) -> InlineKeyboardMarkup:
-        """Построить клавиатуру для перезапуска опроса"""
-        keyboard = [
-            [InlineKeyboardButton("Начать заново", callback_data="restart_survey")]
-        ]
-        return InlineKeyboardMarkup(keyboard)
+
+
+
+

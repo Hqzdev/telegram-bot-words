@@ -184,3 +184,9 @@ class SurveyManager:
             if option.get("id") == option_id:
                 return option.get("comment_question")
         return None
+    
+    def get_question_validation(self, question_id: str) -> Optional[str]:
+        """Получить тип валидации для вопроса"""
+        question = self.get_question(question_id)
+        return question.get("validation") if question else None
+

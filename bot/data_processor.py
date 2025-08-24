@@ -2,6 +2,7 @@
 Модуль для обработки и форматирования данных опроса
 """
 
+import re
 from typing import List, Dict, Any
 from bot.survey_manager import SurveyManager
 
@@ -59,7 +60,8 @@ class DataProcessor:
             option_text = ""
             for option in options:
                 if option.get("id") == selected_option:
-                    option_text = option.get("text", "")
+                    # Используем display_text если есть, иначе обычный text
+                    option_text = option.get("display_text", option.get("text", ""))
                     break
             
             # Формируем ответ
@@ -73,7 +75,8 @@ class DataProcessor:
         options = self.survey_manager.get_question_options(question_id)
         for option in options:
             if option.get("id") == answer:
-                return option.get("text", "")
+                # Используем display_text если есть, иначе обычный text
+                return option.get("display_text", option.get("text", ""))
         
         return str(answer)
     
@@ -92,12 +95,17 @@ class DataProcessor:
                 option_text = ""
                 for option in options:
                     if option.get("id") == option_id:
-                        option_text = option.get("text", "")
+                        # Используем display_text если есть, иначе обычный text
+                        option_text = option.get("display_text", option.get("text", ""))
                         break
                 
                 # Добавляем комментарий, если есть
                 if option_id in comments and comments[option_id]:
-                    option_text += f" - {comments[option_id]}"
+                    # Для опции "Другое" объединяем display_text с комментарием
+                    if option_id == "q3_2_other":
+                        option_text = f"{option_text} {comments[option_id]}"
+                    else:
+                        option_text += f" - {comments[option_id]}"
                 
                 formatted_options.append(option_text)
             
@@ -111,7 +119,8 @@ class DataProcessor:
             for option_id in answer:
                 for option in options:
                     if option.get("id") == option_id:
-                        formatted_options.append(option.get("text", ""))
+                        # Используем display_text если есть, иначе обычный text
+                        formatted_options.append(option.get("display_text", option.get("text", "")))
                         break
             
             return "; ".join(formatted_options)
@@ -123,7 +132,15 @@ class DataProcessor:
         question_type = self.survey_manager.get_question_type(question_id)
         
         if question_type.value == "text":
-            return isinstance(answer, str) and answer.strip() != ""
+            if not isinstance(answer, str) or answer.strip() == "":
+                return False
+            
+            # Проверяем дополнительную валидацию
+            validation_type = self.survey_manager.get_question_validation(question_id)
+            if validation_type:
+                return self._validate_by_type(validation_type, answer)
+            
+            return True
         
         elif question_type.value == "single_choice":
             options = self.survey_manager.get_question_options(question_id)
@@ -139,6 +156,79 @@ class DataProcessor:
                 return "options" in answer and isinstance(answer["options"], list)
         
         return False
+    
+    def _validate_by_type(self, validation_type: str, value: str) -> bool:
+        """Валидация по типу"""
+        if validation_type == "email":
+            return self._validate_email(value)
+        elif validation_type == "phone":
+            return self._validate_phone(value)
+        elif validation_type == "number":
+            return self._validate_number(value)
+        elif validation_type == "full_name":
+            return self._validate_full_name(value)
+        elif validation_type == "telegram_username":
+            return self._validate_telegram_username(value)
+        elif validation_type == "cadastral_number":
+            return self._validate_cadastral_number(value)
+        return True
+    
+    def _validate_email(self, email: str) -> bool:
+        """Валидация email адреса"""
+        # Простая проверка на наличие @ и точки
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        return bool(re.match(email_pattern, email.strip()))
+    
+    def _validate_phone(self, phone: str) -> bool:
+        """Валидация номера телефона"""
+        # Убираем все пробелы, скобки, дефисы и плюсы
+        cleaned_phone = re.sub(r'[\s\(\)\-\+]', '', phone)
+        # Проверяем, что остались только цифры и длина от 10 до 15 символов
+        return cleaned_phone.isdigit() and 10 <= len(cleaned_phone) <= 15
+    
+    def _validate_number(self, number: str) -> bool:
+        """Валидация числового значения"""
+        try:
+            # Пробуем преобразовать в float (поддерживает десятичные числа)
+            float(number.strip())
+            return True
+        except ValueError:
+            return False
+    
+    def _validate_full_name(self, full_name: str) -> bool:
+        """Валидация ФИО (минимум 3 слова)"""
+        # Убираем лишние пробелы и считаем слова
+        words = [word.strip() for word in full_name.split() if word.strip()]
+        return len(words) >= 3
+    
+    def _validate_telegram_username(self, username: str) -> bool:
+        """Валидация имени в Telegram (обязательно @)"""
+        # Проверяем, что есть символ @
+        return '@' in username.strip()
+    
+    def _validate_cadastral_number(self, cadastral: str) -> bool:
+        """Валидация кадастрового номера (только цифры и двоеточия)"""
+        # Убираем лишние пробелы
+        cadastral = cadastral.strip()
+        
+        # Проверяем, что строка содержит только цифры и двоеточия
+        # И что есть хотя бы одна цифра и одно двоеточие
+        if not cadastral:
+            return False
+        
+        # Проверяем, что строка состоит только из цифр и двоеточий
+        if not re.match(r'^[\d:]+$', cadastral):
+            return False
+        
+        # Проверяем, что есть хотя бы одна цифра
+        if not re.search(r'\d', cadastral):
+            return False
+        
+        # Проверяем, что есть хотя бы одно двоеточие
+        if ':' not in cadastral:
+            return False
+        
+        return True
     
     def get_required_fields(self, question_id: str) -> List[str]:
         """Получить список обязательных полей для вопроса"""
@@ -163,3 +253,6 @@ class DataProcessor:
             return ["options"]
         
         return []
+
+
+
